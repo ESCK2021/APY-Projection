@@ -1,0 +1,14 @@
+{
+  "name": "autocompound",
+  "version": "1.0.0",
+  "description": "APY Projection with daily compounded",
+  "main": "index.js",
+  "author": "Eric Chung",
+  "license": "MIT",
+  "dependencies": {
+    "dotenv": "^16.0.0",
+    "ethers": "^5.5.4",
+    "node-fetch": "^2.6.7",
+    "websocket": "^1.0.34"
+  }
+}
