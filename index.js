@@ -14,7 +14,7 @@ const address = {
     Pair_CAKE_BNB: '0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82_0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c' // CAKE-WBNB Pair contract
 }
 
-const period = 364; // In term of days
+const period = 365; // Days
 // Commom variables (Dependent to PancakeSwap proposols and updates)
 const totalFarmMultiplier = 102.1; //Asked admin, need to add up manually
 const totalEmissionPerDay = 72400;
