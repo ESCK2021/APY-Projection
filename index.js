@@ -7,7 +7,12 @@ const provider = new ethers.providers.WebSocketProvider(process.env.WWS); // Usi
 
 const api_CAKE = 'https://api.pancakeswap.info/api/v2/tokens/0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82'; // API_URL of CAKE token
 const api_pairs_CAKE_BNB = 'https://api.pancakeswap.info/api/v2/pairs'; // API_URL of pair tokens
-const address_Pair_CAKE_BNB = '0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82_0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c'; // CAKE-WBNB Pair contract
+const address = {
+    router: '0x10ED43C718714eb63d5aA57B78B54704E256024E', // PancakeSwap RouterV2 contract
+    BUSD: '0xe9e7cea3dedca5984780bafc599bd69add087d56', // BUSD contract
+    CAKE: '0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82', // CAKE contract
+    Pair_CAKE_BNB: '0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82_0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c' // CAKE-WBNB Pair contract
+}
 
 const period = 364; // In term of days
 // Commom variables (Dependent to PancakeSwap proposols and updates)
@@ -18,13 +23,25 @@ const totalEmissionPerDay = 72400;
 const name = "CAKE-BNB"; // Target
 const farmMultiplier = 40; // Can use "getMultiplier" function to track bonus reward
 // ------------------------------------------ Get Data -----------------------------------------------
-// Get require data:
-// (Alternatives: Use subgraph)
-// 1. Get CAKE/USD
+// Get require data: // (Alternatives: Use subgraph)
+// 1. Get CAKE/USD (BUSD)
 // 2. Get BaseQuote Volume(24hrs) - Data are cached for 5 mins, UI will be 10mins(fromm Github)
 // 3. Get Liquidlity of CAKE_WBNB pair in term of CAKE
 
-// Get price of CAKE token
+// Get price of CAKE token, two methods are available:
+
+// 1. Smart Contract method - from router contract(v2), commented!
+// const router = new ethers.Contract(
+//     address.router,
+//     ['function getAmountsOut(uint amountIn, address[] memory path) public view returns (uint[] memory amounts)'],
+//     provider
+// );
+// async function token_price(base, quote) {
+//     const price = await router.getAmountsOut(ethers.utils.parseUnits('1', 18), [base, quote]);
+//     return parseFloat(price[1].toString()/1e18);
+// }
+
+// 2. API method
 async function token_price(api_token) {
         try {
             const response = await fetch(api_token);
@@ -36,6 +53,7 @@ async function token_price(api_token) {
             return 0;
         }
 }
+// Note: Cannot get volume and liquidity from smart contract directly, hence uses API
 // Get base_volume of CAKE-BNB pair
 async function pairs_volume(api_pairs, address_Pair) {
         try {
@@ -45,7 +63,7 @@ async function pairs_volume(api_pairs, address_Pair) {
             return base_volume;
         } catch (e) {
             console.log(e);
-            console.log("Cannot fetch pairs info!");
+            console.log("Cannot fetch pairs volume!");
             return 0, 0;
         }
 }
@@ -58,13 +76,14 @@ async function pairs_liquidity(api_pairs, address_Pair) {
         return liquidity;
     } catch (e) {
         console.log(e);
-        console.log("Cannot fetch pairs info!");
+        console.log("Cannot fetch pairs liquidity!");
         return 0, 0;
     }
 }
 // ------------------------------------ Assumptions on Return -------------------------------------------
 // 1. Added amount has no significant effect on liquidity, e.g. 1 / (1*10^8 + 1)
 // 2. No swap fee and gas fee occured (Reinvestment)
+// 3. No price impact for reinvestmnet
 // --------------------------------------- Daily LP Return ----------------------------------------------
 // @Parameters(Referencing Pancake Swap documentation):
 // 1. Farmer earnings from trading fee per transaction = 0.17%
@@ -105,7 +124,7 @@ function daily_Farm_return(price, liquidity) {
 function calculate_total_APY_compounded(LpDailyReturn, FarmDailyReturn) {
     try {
         // Return daily-compounded APY
-        return ((LpDailyReturn + FarmDailyReturn + 1) ** period - 1);
+        return ((LpDailyReturn + FarmDailyReturn + 1) ** (period - 1) - 1);
     } catch (e) {
         console.log(e);
         console.log("Cannot compute Total APY");
@@ -113,19 +132,21 @@ function calculate_total_APY_compounded(LpDailyReturn, FarmDailyReturn) {
 }
 // --------------------------------------- Main function -------------------------------------------------
 async function main() {
-    // Get Data
-    const CAKE_price = await token_price(api_CAKE);
-    const base_volume_CAKE = await pairs_volume(api_pairs_CAKE_BNB, address_Pair_CAKE_BNB); //issue
-    const liquidity_CAKE_BNB = await pairs_liquidity(api_pairs_CAKE_BNB, address_Pair_CAKE_BNB); //issue
+    // Get CAKE price
+    //const CAKE_price = await token_price(address.CAKE, address.BUSD); // Method 1
+    const CAKE_price = await token_price(api_CAKE); // Method 2
+    //Get CAKE_WBNB volume and liquidity
+    const base_volume_CAKE = await pairs_volume(api_pairs_CAKE_BNB, address.Pair_CAKE_BNB);
+    const liquidity_CAKE_BNB = await pairs_liquidity(api_pairs_CAKE_BNB, address.Pair_CAKE_BNB);
     // Calculation
     const Daily_LP_Return = daily_LP_return(CAKE_price, base_volume_CAKE, liquidity_CAKE_BNB);
     const Daily_Farm_Return = daily_Farm_return(CAKE_price, liquidity_CAKE_BNB);
     const Total_APY_Compounded = calculate_total_APY_compounded(Daily_LP_Return, Daily_Farm_Return);
     // Show APY (LP, Farm, Total)
     console.log(
-        name, ":\n", //Display selected pair
-        "APY in LP Reward: ", Daily_LP_Return * (period + 1) * 100, "%\n",
-        "APY in Farm Base: ", Daily_Farm_Return * (period + 1) * 100, "%\n",
+        name, ":\n", // Indicate target
+        "APY in LP Reward: ", Daily_LP_Return * period * 100, "%\n",
+        "APY in Farm Base: ", Daily_Farm_Return * period * 100, "%\n",
         "Total APY: ", Total_APY_Compounded * 100, "%"
     );
     setTimeout(main, 10000); // Continuously update every 10s
