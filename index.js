@@ -1,14 +1,14 @@
 // ---------------------------------------- Specification ---------------------------------------------
 const ethers = require('ethers');
 const websocket = require('ws');
-const fetch = require("node-fetch"); //@v2-compatible with CommonJS
+const fetch = require("node-fetch"); //@v2 - compatible with CommonJS
 require("dotenv").config();
 const provider = new ethers.providers.WebSocketProvider(process.env.WWS); // Using WebSocket to ensure live data
 
 const api_CAKE = 'https://api.pancakeswap.info/api/v2/tokens/0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82'; // API_URL of CAKE token
 const api_pairs_CAKE_BNB = 'https://api.pancakeswap.info/api/v2/pairs'; // API_URL of pair tokens
 const address = {
-    router: '0x10ED43C718714eb63d5aA57B78B54704E256024E', // PancakeSwap RouterV2 contract
+    Router: '0x10ED43C718714eb63d5aA57B78B54704E256024E', // PancakeSwap RouterV2 contract
     BUSD: '0xe9e7cea3dedca5984780bafc599bd69add087d56', // BUSD contract
     CAKE: '0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82', // CAKE contract
     Pair_CAKE_BNB: '0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82_0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c' // CAKE-WBNB Pair contract
@@ -32,40 +32,40 @@ const farmMultiplier = 40; // Can use "getMultiplier" function to track bonus re
 
 // 1. Smart Contract method - from router contract(v2), commented!
 // const router = new ethers.Contract(
-//     address.router,
+//     address.Router,
 //     ['function getAmountsOut(uint amountIn, address[] memory path) public view returns (uint[] memory amounts)'],
 //     provider
 // );
 // async function token_price(base, quote) {
-//     const price = await router.getAmountsOut(ethers.utils.parseUnits('1', 18), [base, quote]);
+//     const price = await Router.getAmountsOut(ethers.utils.parseUnits('1', 18), [base, quote]);
 //     return parseFloat(price[1].toString()/1e18);
 // }
 
 // 2. API method
 async function token_price(api_token) {
-        try {
-            const response = await fetch(api_token);
-            const data = await response.json();
-            return parseFloat(data.data.price);
-        } catch (e) {
-            console.log(e);
-            console.log("Cannot fetch token info!");
-            return 0;
-        }
+    try {
+        const response = await fetch(api_token);
+        const data = await response.json();
+        return parseFloat(data.data.price);
+    } catch (e) {
+        console.log(e);
+        console.log("Cannot fetch token info!");
+         return 0;
+    }
 }
 // Note: Cannot get volume and liquidity from smart contract directly, hence uses API
 // Get base_volume of CAKE-BNB pair
 async function pairs_volume(api_pairs, address_Pair) {
-        try {
-            const response = await fetch(api_pairs); // API_URL of pair tokens
-            const data = await response.json();
-            const base_volume = parseFloat(data.data[address_Pair].base_volume);
-            return base_volume;
-        } catch (e) {
-            console.log(e);
-            console.log("Cannot fetch pairs volume!");
-            return 0, 0;
-        }
+    try {
+        const response = await fetch(api_pairs); // API_URL of pair tokens
+        const data = await response.json();
+        const base_volume = parseFloat(data.data[address_Pair].base_volume);
+        return base_volume;
+    } catch (e) {
+        console.log(e);
+        console.log("Cannot fetch pairs volume!");
+        return 0, 0;
+    }
 }
 // Get liquidity of CAKE-BNB pair
 async function pairs_liquidity(api_pairs, address_Pair) {
@@ -147,7 +147,7 @@ async function main() {
         name, ":\n", // Indicate target
         "APY in LP Reward: ", Daily_LP_Return * period * 100, "%\n",
         "APY in Farm Base: ", Daily_Farm_Return * period * 100, "%\n",
-        "Total APY: ", Total_APY_Compounded * 100, "%"
+        "Total APY: ", Total_APY_Compounded * 100, "%\n"
     );
     setTimeout(main, 10000); // Continuously update every 10s
 }
