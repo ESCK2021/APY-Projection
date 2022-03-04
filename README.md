@@ -6,4 +6,3 @@ Requirement:
 4. npm install dotenv
 5. touch .env
 6. (In .env file): WWS="YOUR Websocket in BSC mainnet" //Recommend to use Ankr
-# APY-Projection
